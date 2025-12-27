@@ -53,13 +53,13 @@ services:
       SPRING_JACKSON_CHARACTER_ENCODING: UTF-8
       SPRING_JACKSON_LOCALE: zh_CN
       SPRING_JACKSON_TIME_ZONE: Asia/Shanghai
-      SERVER_PORT: 8080
+      SERVER_PORT: 8081
       SERVER_SERVLET_CONTEXT_PATH: /api
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics
       JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport"
       JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.country=CN -Duser.timezone=Asia/Shanghai"
     ports:
-      - "8080:8080"
+      - "8081:8081"
     volumes:
       - ./logs:/app/logs
       - ./backend/config:/app/config:ro  # 后端配置文件路径修正
@@ -67,7 +67,7 @@ services:
       - backend-network  # 与数据库通信
       - frontend-network # 与前端通信
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api"]  # 匹配部署文档的健康检查地址
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api"]  # 匹配部署文档的健康检查地址
       interval: 30s
       timeout: 10s
       retries: 3

@@ -44,11 +44,11 @@ COPY --from=builder /app/target/*.jar app.jar
 RUN mkdir -p /app/logs
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 8081
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/api/actuator/health || exit 1
 
 # 启动应用（注意：JVM参数通过环境变量传递）
 ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} ${JAVA_TOOL_OPTIONS} -Djava.security.egd=file:/dev/./urandom -jar /app/app.jar"]
