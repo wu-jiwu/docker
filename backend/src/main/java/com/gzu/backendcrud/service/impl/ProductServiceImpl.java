@@ -68,11 +68,13 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             return ResultVO.error("商品不存在");
         }
 
-        // 软删除，只修改状态
-        product.setIsActive(false);
-        boolean updated = updateById(product);
+        // 硬删除，直接从数据库删除记录
+        boolean removed = removeById(id);
 
-        if (updated) {
+        if (removed) {
+            // 如果有关联的图片或其他资源，可以在这里添加清理逻辑
+            // 例如：imageService.deleteProductImages(id);
+
             return ResultVO.success("商品删除成功", null);
         }
         return ResultVO.error("商品删除失败");
