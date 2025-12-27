@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理系统 | Product Manager</title>
+    <!-- 使用相对路径 -->
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<!-- 侧边导航栏 -->
+<nav class="sidebar">
+    <div class="logo">
+        <i class="fas fa-boxes"></i>
+        <h2>商品管家</h2>
+    </div>
+    <ul class="nav-links">
+        <li class="active">
+            <a href="#">
+                <i class="fas fa-th-large"></i>
+                <span>商品总览</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-chart-bar"></i>
+                <span>数据分析</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-tags"></i>
+                <span>分类管理</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-cog"></i>
+                <span>系统设置</span>
+            </a>
+        </li>
+    </ul>
+    <div class="user-info">
+        <div class="avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="user-details">
+            <h4>管理员</h4>
+            <p>admin@product.com</p>
+        </div>
+    </div>
+</nav>
+
+<!-- 主内容区 -->
+<main class="main-content">
+    <!-- 顶部导航 -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <h1><i class="fas fa-box-open"></i> 商品管理系统</h1>
+        </div>
+        <div class="topbar-right">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput"
+                       placeholder="搜索商品名称、编码或描述..."
+                       onkeyup="if(event.key === 'Enter') searchProducts()">
+            </div>
+            <button class="btn-notification">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge">3</span>
+            </button>
+            <button class="btn-secondary" onclick="testAPIConnection()">
+                <i class="fas fa-plug"></i> 测试连接
+            </button>
+            <button class="btn-primary" onclick="openModal()">
+                <i class="fas fa-plus"></i> 添加商品
+            </button>
+        </div>
+    </header>
+
+    <!-- 统计卡片 -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-cube"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="totalProducts">0</h3>
+                <p>总商品数</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="totalValue">¥0</h3>
+                <p>总库存价值</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="activeProducts">0</h3>
+                <p>启用商品</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="categoriesCount">0</h3>
+                <p>商品分类</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-list"></i> 商品列表</h2>
+            <div class="panel-actions">
+                <div class="filter-group">
+                    <select id="categorySelect" class="select-filter">
+                        <option value="">所有分类</option>
+                    </select>
+                    <select id="statusSelect" class="select-filter">
+                        <option value="">所有状态</option>
+                        <option value="true">启用</option>
+                        <option value="false">禁用</option>
+                    </select>
+                    <button class="btn-filter" onclick="searchProducts()">
+                        <i class="fas fa-search"></i> 搜索
+                    </button>
+                </div>
+                <div class="batch-actions">
+                    <button class="btn-secondary" onclick="exportData()">
+                        <i class="fas fa-file-export"></i> 导出
+                    </button>
+                    <button class="btn-danger" onclick="batchDelete()">
+                        <i class="fas fa-trash"></i> 批量删除
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="message"></div>
+
+        <!-- 商品表格 -->
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th width="50">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    </th>
+                    <th width="80">ID</th>
+                    <th>商品信息</th>
+                    <th width="120">价格</th>
+                    <th width="100">库存</th>
+                    <th width="120">分类</th>
+                    <th width="100">状态</th>
+                    <th width="150">操作</th>
+                </tr>
+                </thead>
+                <tbody id="productTableBody">
+                <!-- 商品数据会通过JavaScript动态填充 -->
+                <tr class="empty-row">
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <p>加载商品数据中...</p>
+                            <div style="margin-top: 20px;">
+                                <div style="width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                                <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">正在连接后端服务器</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination">
+            <button class="btn-pagination" disabled>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="page-info">第 <strong>1</strong> 页，共 <strong>1</strong> 页</span>
+            <button class="btn-pagination">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</main>
+
+<!-- 商品表单模态框 -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">
+                <i class="fas fa-plus-circle"></i> 添加新商品
+            </h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+
+        <form id="productForm">
+            <input type="hidden" id="productId">
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="productName">
+                        <i class="fas fa-tag"></i> 商品名称
+                        <span class="required">*</span>
+                    </label>
+                    <input type="text" id="productName" required placeholder="请输入商品名称">
+                </div>
+
+                <div class="form-group">
+                    <label for="productCode">
+                        <i class="fas fa-barcode"></i> 商品编码
+                        <span class="required">*</span>
+                    </label>
+                    <input type="text" id="productCode" required placeholder="请输入唯一编码">
+                </div>
+
+                <div class="form-group">
+                    <label for="price">
+                        <i class="fas fa-money-bill-wave"></i> 价格
+                        <span class="required">*</span>
+                    </label>
+                    <div class="input-with-unit">
+                        <input type="number" id="price" step="0.01" min="0.01" required placeholder="0.00">
+                        <span class="unit">¥</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="stock">
+                        <i class="fas fa-boxes"></i> 库存数量
+                        <span class="required">*</span>
+                    </label>
+                    <input type="number" id="stock" min="0" required placeholder="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="category">
+                        <i class="fas fa-folder"></i> 商品分类
+                        <span class="required">*</span>
+                    </label>
+                    <div class="input-with-suggestions">
+                        <input type="text" id="category" required placeholder="选择或输入分类">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="isActive">
+                        <i class="fas fa-power-off"></i> 商品状态
+                    </label>
+                    <div class="status-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="isActive" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="status-label">启用</span>
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="description">
+                        <i class="fas fa-file-alt"></i> 商品描述
+                    </label>
+                    <textarea id="description" rows="3" placeholder="请输入商品描述信息..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> 保存商品
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content confirm-modal">
+        <div class="confirm-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 id="deleteModalTitle">确认删除</h3>
+        <p id="deleteModalMessage">您确定要删除这个商品吗？此操作不可撤销。</p>
+        <div class="confirm-actions">
+            <button class="btn-secondary" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <button class="btn-danger" onclick="confirmDelete()">
+                <i class="fas fa-trash"></i> 确认删除
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<!-- 将所有JS代码整合到HTML中 -->
+<script>
+    // ================ app.js 内容 ================
+    const BASE_URL = '/api/products';
+    let currentProducts = [];
+
+    class ProductAPI {
+        static async fetchProducts() {
+            try {
+                console.log('正在请求商品数据，URL:', BASE_URL);
+                const response = await fetch(BASE_URL);
+
+                console.log('响应状态码:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('API响应数据:', result);
+
+                if (result.code === 200) {
+                    currentProducts = result.data || [];
+                    console.log('商品数据加载成功，数量:', currentProducts.length);
+                    return currentProducts;
+                } else {
+                    throw new Error(result.message || '获取商品失败');
+                }
+            } catch (error) {
+                console.error('获取商品数据失败:', error);
+                throw error;
+            }
+        }
+
+        static async fetchProductById(id) {
+            try {
+                const response = await fetch(`${BASE_URL}/${id}`);
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || '获取商品详情失败');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        static async createProduct(productData) {
+            try {
+                const response = await fetch(BASE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                if (result.code === 200) {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || '创建商品失败');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        static async updateProduct(id, productData) {
+            try {
+                const response = await fetch(`${BASE_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                if (result.code === 200) {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || '更新商品失败');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        static async deleteProduct(id) {
+            try {
+                const response = await fetch(`${BASE_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.code === 200) {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || '删除商品失败');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        static async batchDeleteProducts(ids) {
+            try {
+                const response = await fetch(`${BASE_URL}/batch`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ids)
+                });
+
+                const result = await response.json();
+                if (result.code === 200) {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || '批量删除失败');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        static getCurrentProducts() {
+            return currentProducts;
+        }
+
+        static setCurrentProducts(products) {
+            currentProducts = products;
+        }
+    }
+
+    // ================ product-ui.js 内容 ================
+    class ProductUI {
+        constructor() {
+            this.initialize();
+        }
+
+        async initialize() {
+            console.log('ProductUI 初始化...');
+
+            await this.loadProducts();
+
+            document.getElementById('productForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveProduct();
+            });
+
+            window.onclick = (event) => {
+                const modal = document.getElementById('productModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                let searchTimeout;
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.searchProducts();
+                    }, 500);
+                });
+            }
+
+            const categorySelect = document.getElementById('categorySelect');
+            if (categorySelect) {
+                categorySelect.addEventListener('change', () => {
+                    this.filterByCategory();
+                });
+            }
+
+            const statusSelect = document.getElementById('statusSelect');
+            if (statusSelect) {
+                statusSelect.addEventListener('change', () => {
+                    this.filterByStatus();
+                });
+            }
+
+            console.log('ProductUI 初始化完成');
+        }
+
+        async loadProducts() {
+            try {
+                console.log('开始加载商品数据...');
+                const products = await ProductAPI.fetchProducts();
+                console.log('商品数据加载成功，数量:', products.length);
+                this.renderProducts(products);
+                this.updateStats(products);
+                this.populateCategories(products);
+            } catch (error) {
+                console.error('加载商品失败:', error);
+                this.showMessage(`加载商品失败: ${error.message}`, 'error');
+
+                const tableBody = document.getElementById('productTableBody');
+                tableBody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle" style="color: #f72585;"></i>
+                            <p>无法加载商品数据</p>
+                            <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">错误: ${error.message}</p>
+                            <p style="color: var(--text-muted); font-size: 12px;">请检查后端服务是否启动</p>
+                            <button class="btn-primary" onclick="productUI.loadProducts()" style="margin-top: 20px;">
+                                <i class="fas fa-redo"></i> 重试
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            }
+        }
+
+        renderProducts(products) {
+            const tableBody = document.getElementById('productTableBody');
+
+            if (!products || products.length === 0) {
+                tableBody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <p>暂无商品数据</p>
+                            <button class="btn-primary" onclick="openModal()">
+                                <i class="fas fa-plus"></i> 添加第一个商品
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                return;
+            }
+
+            tableBody.innerHTML = '';
+
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                <td><input type="checkbox" class="productCheckbox" value="${product.id}"></td>
+                <td>${product.id}</td>
+                <td>
+                    <div style="font-weight: 600; margin-bottom: 4px;">${product.productName}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">编码: ${product.productCode}</div>
+                </td>
+                <td style="font-weight: 600; color: var(--success-color);">¥${product.price}</td>
+                <td>
+                    <div style="font-weight: 600;">${product.stock}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">库存</div>
+                </td>
+                <td><span class="status-badge" style="background: rgba(67, 97, 238, 0.1); color: var(--primary-color); padding: 4px 12px; border-radius: 12px;">${product.category}</span></td>
+                <td>
+                    <span class="status-badge ${product.isActive ? 'active' : 'inactive'}">
+                        <i class="fas fa-circle" style="font-size: 8px;"></i>
+                        ${product.isActive ? '启用' : '禁用'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-action edit" onclick="editProduct(${product.id})" title="编辑">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action delete" onclick="deleteProduct(${product.id})" title="删除">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        updateStats(products) {
+            const totalProducts = products.length;
+            const activeProducts = products.filter(p => p.isActive).length;
+            const totalValue = products.reduce((sum, p) => {
+                const price = parseFloat(p.price) || 0;
+                const stock = parseInt(p.stock) || 0;
+                return sum + (price * stock);
+            }, 0);
+            const categories = [...new Set(products.map(p => p.category))].length;
+
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('activeProducts').textContent = activeProducts;
+            document.getElementById('totalValue').textContent = '¥' + totalValue.toFixed(2);
+            document.getElementById('categoriesCount').textContent = categories;
+        }
+
+        populateCategories(products) {
+            const categorySelect = document.getElementById('categorySelect');
+
+            if (!categorySelect) return;
+
+            while (categorySelect.options.length > 1) {
+                categorySelect.remove(1);
+            }
+
+            if (!products || products.length === 0) return;
+
+            const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        filterByCategory() {
+            const category = document.getElementById('categorySelect').value;
+            const currentProducts = ProductAPI.getCurrentProducts();
+
+            if (!category) {
+                this.renderProducts(currentProducts);
+                this.updateStats(currentProducts);
+                return;
+            }
+
+            const filteredProducts = currentProducts.filter(p => p.category === category);
+            this.renderProducts(filteredProducts);
+            this.updateStats(filteredProducts);
+        }
+
+        filterByStatus() {
+            const status = document.getElementById('statusSelect').value;
+            const currentProducts = ProductAPI.getCurrentProducts();
+
+            if (!status) {
+                this.renderProducts(currentProducts);
+                this.updateStats(currentProducts);
+                return;
+            }
+
+            const isActive = status === 'true';
+            const filteredProducts = currentProducts.filter(p => p.isActive === isActive);
+            this.renderProducts(filteredProducts);
+            this.updateStats(filteredProducts);
+        }
+
+        searchProducts() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const currentProducts = ProductAPI.getCurrentProducts();
+
+            if (!keyword) {
+                this.renderProducts(currentProducts);
+                this.updateStats(currentProducts);
+                return;
+            }
+
+            const filteredProducts = currentProducts.filter(p =>
+                (p.productName && p.productName.toLowerCase().includes(keyword)) ||
+                (p.productCode && p.productCode.toLowerCase().includes(keyword)) ||
+                (p.description && p.description.toLowerCase().includes(keyword)) ||
+                (p.category && p.category.toLowerCase().includes(keyword))
+            );
+
+            this.renderProducts(filteredProducts);
+            this.updateStats(filteredProducts);
+        }
+
+        openModal() {
+            document.getElementById('modalTitle').textContent = '添加商品';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('isActive').checked = true;
+            document.getElementById('productModal').style.display = 'block';
+        }
+
+        closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        async editProduct(id) {
+            try {
+                const product = await ProductAPI.fetchProductById(id);
+
+                document.getElementById('modalTitle').textContent = '编辑商品';
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.productName;
+                document.getElementById('productCode').value = product.productCode;
+                document.getElementById('price').value = product.price;
+                document.getElementById('stock').value = product.stock;
+                document.getElementById('category').value = product.category;
+                document.getElementById('description').value = product.description || '';
+                document.getElementById('isActive').checked = product.isActive;
+                document.getElementById('productModal').style.display = 'block';
+            } catch (error) {
+                this.showMessage(error.message, 'error');
+            }
+        }
+
+        async saveProduct() {
+            const id = document.getElementById('productId').value;
+            const productData = {
+                productName: document.getElementById('productName').value,
+                productCode: document.getElementById('productCode').value,
+                price: parseFloat(document.getElementById('price').value) || 0,
+                stock: parseInt(document.getElementById('stock').value) || 0,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                isActive: document.getElementById('isActive').checked
+            };
+
+            if (!productData.productName || !productData.productCode || !productData.category) {
+                this.showMessage('请填写所有必填字段', 'error');
+                return;
+            }
+
+            try {
+                if (id) {
+                    await ProductAPI.updateProduct(id, productData);
+                    this.showMessage('商品更新成功', 'success');
+                } else {
+                    await ProductAPI.createProduct(productData);
+                    this.showMessage('商品添加成功', 'success');
+                }
+
+                this.closeModal();
+                await this.loadProducts();
+            } catch (error) {
+                this.showMessage(error.message, 'error');
+            }
+        }
+
+        async deleteProduct(id) {
+            if (!confirm('确定要删除这个商品吗？')) {
+                return;
+            }
+
+            try {
+                await ProductAPI.deleteProduct(id);
+                this.showMessage('商品删除成功', 'success');
+                await this.loadProducts();
+            } catch (error) {
+                this.showMessage(error.message, 'error');
+            }
+        }
+
+        toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.productCheckbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        async batchDelete() {
+            const checkboxes = document.querySelectorAll('.productCheckbox:checked');
+            if (checkboxes.length === 0) {
+                this.showMessage('请选择要删除的商品', 'error');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${checkboxes.length} 个商品吗？`)) {
+                return;
+            }
+
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            try {
+                await ProductAPI.batchDeleteProducts(ids);
+                this.showMessage('批量删除成功', 'success');
+                await this.loadProducts();
+            } catch (error) {
+                this.showMessage(error.message, 'error');
+            }
+        }
+
+        exportData() {
+            const products = ProductAPI.getCurrentProducts();
+            if (!products || products.length === 0) {
+                this.showMessage('没有数据可导出', 'error');
+                return;
+            }
+
+            const headers = ['ID', '商品名称', '商品编码', '价格', '库存', '分类', '描述', '状态'];
+            const csvRows = [
+                headers.join(','),
+                ...products.map(p => [
+                    p.id,
+                    `"${p.productName}"`,
+                    p.productCode,
+                    p.price,
+                    p.stock,
+                    p.category,
+                    `"${p.description || ''}"`,
+                    p.isActive ? '启用' : '禁用'
+                ].join(','))
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `商品数据_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            this.showMessage('数据导出成功', 'success');
+        }
+
+        showMessage(text, type) {
+            const messageElement = document.getElementById('message');
+            if (!messageElement) return;
+
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    // ================ 全局实例和函数 ================
+    const productUI = new ProductUI();
+
+    // 全局函数
+    function openModal() { productUI.openModal(); }
+    function closeModal() { productUI.closeModal(); }
+    function editProduct(id) { productUI.editProduct(id); }
+    function deleteProduct(id) { productUI.deleteProduct(id); }
+    function searchProducts() { productUI.searchProducts(); }
+    function filterByCategory() { productUI.filterByCategory(); }
+    function filterByStatus() { productUI.filterByStatus(); }
+    function toggleSelectAll() { productUI.toggleSelectAll(); }
+    function batchDelete() { productUI.batchDelete(); }
+    function exportData() { productUI.exportData(); }
+
+    // ================ 测试连接函数 ================
+    function testAPIConnection() {
+        console.log('测试API连接...');
+
+        // 测试多个可能的URL
+        const urls = [
+            '/api/products',
+            'http://localhost:8080/api/products',
+            './api/products',
+            'api/products'
+        ];
+
+        urls.forEach((url, index) => {
+            console.log(`测试URL ${index + 1}: ${url}`);
+            fetch(url)
+                .then(response => {
+                    console.log(`URL ${index + 1} 状态:`, response.status);
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                })
+                .then(data => {
+                    console.log(`URL ${index + 1} 成功:`, data);
+                    alert(`连接成功！URL: ${url}\n数据: ${JSON.stringify(data, null, 2)}`);
+                })
+                .catch(error => {
+                    console.log(`URL ${index + 1} 失败:`, error.message);
+                });
+        });
+    }
+
+    // 页面加载时自动测试
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('页面已加载，当前URL:', window.location.href);
+
+        // 如果是通过file://协议访问，提示用户
+        if (window.location.protocol === 'file:') {
+            alert('警告：请通过 http://localhost:8080/ 访问页面，而不是直接打开HTML文件！');
+            console.log('检测到file://协议，可能无法正常请求API');
+        }
+
+        // 延迟加载数据
+        setTimeout(() => {
+            console.log('开始加载商品数据...');
+        }, 500);
+    });
+</script>
+</body>
+</html>
