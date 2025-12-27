@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: crud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: crud_db
+      MYSQL_USER: ${MYSQL_USER:-crud_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-Crud@123456}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+
+  # 后端API服务（修复构建路径）
+  backend:
+    build:
+      context: ./backend  # 指向后端代码所在目录
+      dockerfile: Dockerfile  # 明确指定Dockerfile位置
+    container_name: crud-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy  # 等待数据库健康后启动
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      LC_CTYPE: C.UTF-8
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/crud_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crud_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-Crud@123456}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_HTTP_ENCODING_CHARSET: UTF-8
+      SPRING_HTTP_ENCODING_ENABLED: true
+      SPRING_HTTP_ENCODING_FORCE: true
+      SERVER_SERVLET_ENCODING_CHARSET: UTF-8
+      SERVER_SERVLET_ENCODING_ENABLED: true
+      SERVER_SERVLET_ENCODING_FORCE: true
+      SPRING_JACKSON_CHARACTER_ENCODING: UTF-8
+      SPRING_JACKSON_LOCALE: zh_CN
+      SPRING_JACKSON_TIME_ZONE: Asia/Shanghai
+      SERVER_PORT: 8080
+      SERVER_SERVLET_CONTEXT_PATH: /api
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseContainerSupport"
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.country=CN -Duser.timezone=Asia/Shanghai"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      - ./backend/config:/app/config:ro  # 后端配置文件路径修正
+    networks:
+      - backend-network  # 与数据库通信
+      - frontend-network # 与前端通信
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api"]  # 匹配部署文档的健康检查地址
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # 给后端足够启动时间
+
+  # 前端服务
+  frontend:
+    build: ./frontend
+    container_name: full-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy  # 等待后端健康后启动
+    ports:
+      - "80:80"
+      - "3000:80"
+    volumes:
+      - ./frontend/static:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - frontend-network  # 仅与后端通信
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# 自定义网络（隔离不同服务组）
+networks:
+  backend-network:
+    driver: bridge  # 仅数据库和后端可见
+  frontend-network:
+    driver: bridge  # 仅后端和前端可见
+
+# 数据卷（持久化数据库数据）
+volumes:
+  mysql_data:
+    driver: local
